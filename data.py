@@ -1,4 +1,4 @@
-URBAN_ROUTES_URL = ''  # Leave this empty string for now
+URBAN_ROUTES_URL = ' https://cnt-09d9b9f9-a2d9-479b-96f4-6a039914f128.containerhub.tripleten-services.com'
 ADDRESS_FROM = 'East 2nd Street, 601'
 ADDRESS_TO = '1300 1st St'
 PHONE_NUMBER = '+1 123 123 12 12'
