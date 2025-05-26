@@ -1,53 +1,47 @@
+from selenium import webdriver
+from selenium.webdriver import DesiredCapabilities
 import data
 import helpers
-
+from pages import UrbanRoutesPage  # NEW
 
 class TestUrbanRoutes:
     @classmethod
     def setup_class(cls):
-        if helpers.is_url_reachable(data.URBAN_ROUTES_URL):
-            print("Connected to the Urban Routes server")
+        capabilities = DesiredCapabilities.CHROME
+        capabilities["goog:loggingPrefs"] = {'performance': 'ALL'}
+        cls.driver = webdriver.Chrome(desired_capabilities=capabilities)
+
+        if helpers.is_url_reachable(data.URBAN_ROUTES_URL.strip()):
+            cls.driver.get(data.URBAN_ROUTES_URL.strip())
+            cls.page = UrbanRoutesPage(cls.driver)  # REUSABLE
         else:
-            print("Cannot connect to Urban Routes. Check the server is on and still running")
+            raise Exception("Urban Routes server not reachable.")
+
+    @classmethod
+    def teardown_class(cls):
+        cls.driver.quit()
 
     def test_set_route(self):
-        # Add in S8
-        print("function created for set route")
-        pass
+        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
 
     def test_select_plan(self):
-        # Add in S8
-        print("function created for select plan")
-        pass
+        self.page.select_supportive_plan()
 
     def test_fill_phone_number(self):
-        # Add in S8
-        print("function created for fill phone number")
-        pass
+        self.page.enter_phone(data.PHONE_NUMBER)
+        self.page.enter_sms_code()
 
     def test_fill_card(self):
-        # Add in S8
-        print("function created for fill card")
-        pass
+        self.page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
 
     def test_comment_for_driver(self):
-        # Add in S8
-        print("function created for comment for driver")
-        pass
+        self.page.leave_driver_comment(data.MESSAGE_FOR_DRIVER)
 
     def test_order_blanket_and_handkerchiefs(self):
-        # Add in S8
-        print("function created for order blanket and handkerchiefs")
-        pass
+        self.page.order_blanket_and_handkerchiefs()
 
     def test_order_2_ice_creams(self):
-        # Add in S8
-        print("function created for order 2 ice creams")
-        for i in range(2):
-            # Add in S8
-            pass
+        self.page.order_ice_cream(count=2)
 
     def test_car_search_model_appears(self):
-        # Add in S8
-        print("function created for car search model appears")
-        pass
+        self.page.finalize_order(data.MESSAGE_FOR_DRIVER)
