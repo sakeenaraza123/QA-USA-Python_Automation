@@ -1,8 +1,9 @@
 from selenium import webdriver
 from selenium.webdriver import DesiredCapabilities
+from pages import UrbanRoutesPage
 import data
 import helpers
-from pages import UrbanRoutesPage  # NEW
+
 
 class TestUrbanRoutes:
     @classmethod
@@ -13,7 +14,7 @@ class TestUrbanRoutes:
 
         if helpers.is_url_reachable(data.URBAN_ROUTES_URL.strip()):
             cls.driver.get(data.URBAN_ROUTES_URL.strip())
-            cls.page = UrbanRoutesPage(cls.driver)  # REUSABLE
+            cls.page = UrbanRoutesPage(cls.driver)
         else:
             raise Exception("Urban Routes server not reachable.")
 
@@ -24,24 +25,32 @@ class TestUrbanRoutes:
     def test_set_route(self):
         self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
 
-    def test_select_plan(self):
+    def test_select_tariff(self):
         self.page.select_supportive_plan()
+        selected_class = self.page.driver.find_element(*self.page.SUPPORTIVE_PLAN).get_attribute("class")
+        assert "selected" in selected_class
 
-    def test_fill_phone_number(self):
+    def test_phone_verification(self):
         self.page.enter_phone(data.PHONE_NUMBER)
         self.page.enter_sms_code()
+        assert self.page.driver.find_element(*self.page.CARD_NUMBER_INPUT).is_displayed()
 
-    def test_fill_card(self):
+    def test_card_entry(self):
         self.page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
+        assert self.page.driver.find_element(*self.page.LINK_CARD_BTN).is_displayed()
 
-    def test_comment_for_driver(self):
+    def test_driver_comment(self):
         self.page.leave_driver_comment(data.MESSAGE_FOR_DRIVER)
+        comment_box = self.page.driver.find_element(*self.page.DRIVER_COMMENT_INPUT)
+        assert data.MESSAGE_FOR_DRIVER in comment_box.get_attribute("value")
 
-    def test_order_blanket_and_handkerchiefs(self):
+    def test_extras(self):
         self.page.order_blanket_and_handkerchiefs()
+        status = self.page.get_blanket_status()
+        assert status == "Added"
 
-    def test_order_2_ice_creams(self):
         self.page.order_ice_cream(count=2)
 
-    def test_car_search_model_appears(self):
-        self.page.finalize_order(data.MESSAGE_FOR_DRIVER)
+    def test_finalize_booking(self):
+        modal = self.page.finalize_order(data.MESSAGE_FOR_DRIVER)
+        assert modal.is_displayed()
