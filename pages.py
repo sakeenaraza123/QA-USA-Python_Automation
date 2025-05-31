@@ -69,3 +69,6 @@ class UrbanRoutesPage:
         self.driver.find_element(*self.DRIVER_COMMENT_INPUT).send_keys(comment)
         self.driver.find_element(*self.ORDER_BTN).click()
         return self.wait.until(EC.visibility_of_element_located(self.SEARCH_MODAL))
+
+    def get_current_selected_plan(self):
+        return self.driver.find_element(*self.SUPPORTIVE_PLAN).get_attribute("class")
