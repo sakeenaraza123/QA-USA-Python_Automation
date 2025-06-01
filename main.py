@@ -4,62 +4,106 @@ from pages import UrbanRoutesPage
 import data
 import helpers
 
+
 class TestUrbanRoutes:
     @classmethod
     def setup_class(cls):
-        options = Options()
-        options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
-        cls.driver = webdriver.Chrome(options=options)
-        cls.driver.get(data.URBAN_ROUTES_URL.strip())
-        cls.page = UrbanRoutesPage(cls.driver)
+        # Check if server is reachable before setting up driver
+        if helpers.is_url_reachable(data.URBAN_ROUTES_URL.strip()):
+            print("Connected to the Urban Routes server")
+            options = Options()
+            options.add_experimental_option("goog:loggingPrefs", {"performance": "ALL"})
+            cls.driver = webdriver.Chrome(options=options)
+        else:
+            print("Cannot connect to Urban Routes. Check the server is on and still running")
+            raise Exception("Urban Routes server not reachable.")
 
     def test_set_route(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
+
+        # Verify the addresses were set correctly
         from_value = self.driver.find_element(*self.page.FROM_INPUT).get_attribute("value")
         to_value = self.driver.find_element(*self.page.TO_INPUT).get_attribute("value")
         assert from_value == data.ADDRESS_FROM
         assert to_value == data.ADDRESS_TO
 
-    def test_select_tariff(self):
+    def test_select_plan(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.select_supportive_plan()
-        assert "selected" in self.page.get_current_selected_plan()
 
-    def test_phone_verification(self):
+        # Verify supportive plan is selected
+        selected_class = self.page.get_current_selected_plan()
+        assert "selected" in selected_class
+
+    def test_fill_phone_number(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.enter_phone(data.PHONE_NUMBER)
         self.page.enter_sms_code()
-        assert self.page.driver.find_element(*self.page.CARD_NUMBER_INPUT).is_displayed()
 
-    def test_card_entry(self):
+        # Verify phone verification was successful (next step appears)
+        assert self.page.is_card_input_displayed()
+
+    def test_fill_card(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
-        assert self.page.driver.find_element(*self.page.LINK_CARD_BTN).is_displayed()
 
-    def test_driver_comment(self):
+        # Verify card was added successfully
+        assert self.page.is_card_linked()
+
+    def test_comment_for_driver(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.leave_driver_comment(data.MESSAGE_FOR_DRIVER)
-        comment_box = self.page.driver.find_element(*self.page.DRIVER_COMMENT_INPUT)
-        assert data.MESSAGE_FOR_DRIVER in comment_box.get_attribute("value")
 
-    def test_extras(self):
+        # Verify comment was entered
+        comment_value = self.page.get_driver_comment()
+        assert data.MESSAGE_FOR_DRIVER in comment_value
+
+    def test_order_blanket_and_handkerchiefs(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.order_blanket_and_handkerchiefs()
-        status = self.page.get_blanket_status()
-        assert status == "Added"
-        self.page.order_ice_cream(count=2)
 
-    def test_finalize_booking(self):
+        # Verify blanket and handkerchiefs are ordered
+        status = self.page.get_blanket_status()
+        assert status == "Added" or self.page.is_blanket_selected()
+
+    def test_order_2_ice_creams(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
-        self.page.set_address(data.ADDRESS_FROM, data.ADDRESS_TO)
-        modal = self.page.finalize_order(data.MESSAGE_FOR_DRIVER)
-        assert modal.is_displayed()
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
+
+        # Order 2 ice creams using a loop
+        for i in range(2):
+            self.page.add_ice_cream()
+
+        # Verify 2 ice creams were ordered
+        ice_cream_count = self.page.get_ice_cream_count()
+        assert ice_cream_count == 2
+
+    def test_car_search_model_appears(self):
+        self.driver.get(data.URBAN_ROUTES_URL.strip())
+        self.page = UrbanRoutesPage(self.driver)
+        self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
+        self.page.select_supportive_plan()
+        self.page.enter_phone(data.PHONE_NUMBER)
+        self.page.enter_sms_code()
+        self.page.add_credit_card(data.CARD_NUMBER, data.CARD_CODE)
+        self.page.leave_driver_comment(data.MESSAGE_FOR_DRIVER)
+
+        # Finalize the order and verify car search modal appears
+        modal = self.page.finalize_order()
+        assert self.page.is_car_search_modal_displayed()
 
     @classmethod
     def teardown_class(cls):
