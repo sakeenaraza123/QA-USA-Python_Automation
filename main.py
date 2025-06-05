@@ -1,5 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from pages import UrbanRoutesPage
 import data
 import helpers
@@ -14,6 +16,7 @@ class TestUrbanRoutes:
             options = Options()
             options.add_experimental_option("goog:loggingPrefs", {"performance": "ALL"})
             cls.driver = webdriver.Chrome(options=options)
+            cls.wait = WebDriverWait(cls.driver, 10)
         else:
             print("Cannot connect to Urban Routes. Check the server is on and still running")
             raise Exception("Urban Routes server not reachable.")
@@ -35,9 +38,11 @@ class TestUrbanRoutes:
         self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.select_supportive_plan()
 
-        # Verify supportive plan is selected
-        selected_class = self.page.get_current_selected_plan()
-        assert "selected" in selected_class
+        # Wait for the plan selection to complete and verify supportive plan is selected
+        self.wait.until(lambda driver: "selected" in self.page.get_current_selected_plan())
+
+        # Verify supportive plan is specifically selected
+        assert self.page.get_current_selected_plan() == "Supportive"
 
     def test_fill_phone_number(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
@@ -74,9 +79,18 @@ class TestUrbanRoutes:
         self.page.set_route(data.ADDRESS_FROM, data.ADDRESS_TO)
         self.page.order_blanket_and_handkerchiefs()
 
-        # Verify blanket and handkerchiefs are ordered
-        status = self.page.get_blanket_status()
-        assert status == "Added" or self.page.is_blanket_selected()
+        # Wait for the blanket status element to be present and visible
+        try:
+            self.wait.until(EC.presence_of_element_located(
+                (By.XPATH, "//div[@class='r-sw']//div[@class='switch-input']")
+            ))
+
+            # Verify blanket and handkerchiefs are ordered using is_blanket_selected
+            assert self.page.is_blanket_selected()
+        except:
+            # Fallback verification if the element structure is different
+            status = self.page.get_blanket_status()
+            assert status == "Added" or self.page.is_blanket_selected()
 
     def test_order_2_ice_creams(self):
         self.driver.get(data.URBAN_ROUTES_URL.strip())
